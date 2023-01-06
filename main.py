@@ -1,63 +1,81 @@
-help = "help"
-todo = "todo"
-show_all = "show all"
-show = "show"
-exit = "exit"
+import telebot
+from config import token
+
+HELP = """
+/help - список доступных команд
+/todo /add [date] [task] - добавить задачу(task) на дату(date)
+/show_all - показать все задачи
+/show [date] - показать список задач на дату(date)
+"""
 
 today = "сегодня"
 tomorrow = "завтра"
 
-HELP = f"""
-{help} - показать список доступных команд
-{todo} - добавить задачу в список дел
-{show_all} - показать весь список задач
-{show} - показать список задач на конкретную дату
-{exit} - завершение работы
-"""
-
 tasks = {
-    today: ["отжиматься", "приседать"],
-    tomorrow: ["бегать", "прыгать"],
-    "31.12": ["отдыхать"]
+    today: [],
+    tomorrow: []
     }
+bot = telebot.TeleBot(token)
 
 def date_converter(date):
     if date == "today":
-        return today
+        date = today
     elif date == "tomorrow":
-        return tomorrow
+        date = tomorrow
     return date
 
-while True:
-    command = input("Введите команду: ")
+@bot.message_handler(commands=["help"])
+def help(message):
+    bot.send_message(message.chat.id, HELP)
 
-    if command == help:
-        print(HELP)
-    elif command == show_all:
-        for date, task in tasks.items():
-            print(f"{date}: ", end="")
-            print(*task, sep=", ")
-    elif command == show:
-        date = input("Введите дату: ").lower()
-        date = date_converter(date)
-        if date in tasks:
-            for task in tasks[date]:
-                print('-', task)
-        else:
-            print("Такой даты нет.")
-    elif command == todo:
-        date = input("Введите срок выполнения: ").lower()
-        task = input("Введите задачу: ")
-        date = date_converter(date)
-        if date in tasks:
-            tasks[date].append(task)
-        else:
-            tasks[date] = [task]
-        print("Задача добавлена.")
-    elif command == exit:
-        print("Программа завершена.")
-        break
+@bot.message_handler(commands=["todo", "add"])
+def todo(message):
+    command = message.text.split(maxsplit=2)
+    date = command[1].lower()
+    date = date_converter(date)
+    task = command[2]
+    if date in tasks:
+        tasks[date].append(task)
     else:
-        print("Неизвестная команда.")
-        print(HELP)
+        tasks[date] = [task]
+    bot.send_message(message.chat.id, "Задача добавлена")
+
+@bot.message_handler(commands=["show_all"])
+def show_all(message):
+    for date, task in tasks.items():
+        text = f"{date.upper()}:\n"
+        for string in task:
+            text += f"[] {string}\n"
+        bot.send_message(message.chat.id, text)
+    print(tasks)                            #  ВРЕМЕННО
+
+@bot.message_handler(commands=["show"])
+def show(message):
+    date = message.text.split()[1].lower()
+    date = date_converter(date)
+    if date in tasks and tasks[date]:
+        text = f"{date.upper()}:\n"
+        for string in tasks[date]:
+            text += f"[] {string}\n"
+    else:
+        text = "Задач на указанную дату нет"
+    bot.send_message(message.chat.id, text)
+    
+
+bot.polling(none_stop=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
